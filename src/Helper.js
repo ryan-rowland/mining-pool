@@ -52,7 +52,7 @@ class Helper {
      * @returns {Promise.<Nimiq.Address>}
      */
     static async getUser(connectionPool, id) {
-        const [rows, fields] = await connectionPool.execute("SELECT address FROM user WHERE id=?", [id]);
+        const [rows, fields] = await connectionPool.execute('SELECT address FROM user WHERE id=?', [id]);
         return Nimiq.Address.fromBase64(rows[0].address);
     }
 
@@ -61,9 +61,27 @@ class Helper {
      * @param {Nimiq.Address} address
      * @returns {Promise.<number>}
      */
+    static async getStoreUserId(connectionPool, address) {
+        const [rows, fields] = await connectionPool.execute('CALL GetStoreUserId(?)', [address.toBase64()]);
+        if (rows.length > 0) {
+            return rows[0].id;
+        } else {
+            return -1;
+        }
+    }
+
+    /**
+     * @param {mysql2.Pool} connectionPool
+     * @param {Nimiq.Address} address
+     * @returns {Promise.<number>}
+     */
     static async getUserId(connectionPool, address) {
-        const [rows, fields] = await connectionPool.execute("SELECT id FROM user WHERE address=?", [address.toBase64()]);
-        return rows[0].id;
+        const [rows, fields] = await connectionPool.execute('SELECT id FROM user WHERE address=?', [address.toBase64()]);
+        if (rows.length > 0) {
+            return rows[0].id;
+        } else {
+            return -1;
+        }
     }
 
     /**
@@ -73,8 +91,12 @@ class Helper {
      * @returns {Promise.<number>}
      */
     static async getStoreBlockId(connectionPool, blockHash, height) {
-        await connectionPool.execute("INSERT IGNORE INTO block (hash, height) VALUES (?, ?)", [blockHash.serialize(), height]);
-        return await Helper.getBlockId(connectionPool, blockHash);
+        const [rows, fields] = await connectionPool.execute('CALL GetStoreBlockId(?, ?)', [blockHash.serialize(), height]);
+        if (rows.length > 0) {
+            return rows[0].id;
+        } else {
+            return -1;
+        }
     }
 
     /**
@@ -83,7 +105,7 @@ class Helper {
      * @returns {Promise.<number>}
      */
     static async getBlockId(connectionPool, blockHash) {
-        const [rows, fields] = await connectionPool.execute("SELECT id FROM block WHERE hash=?", [blockHash.serialize()]);
+        const [rows, fields] = await connectionPool.execute('SELECT id FROM block WHERE hash=?', [blockHash.serialize()]);
         if (rows.length > 0) {
             return rows[0].id;
         } else {
