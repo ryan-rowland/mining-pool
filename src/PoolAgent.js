@@ -441,11 +441,12 @@ class PoolAgent extends Nimiq.Observable {
         this._extraDataOld = this._extraData;
 
         this._difficulty = newDifficulty;
-        this._extraData = new Nimiq.SerialBuffer(this._pool.name.length + this._address.serializedSize + 9);
+        this._extraData = new Nimiq.SerialBuffer(this._pool.name.length + this._address.serializedSize + 13);
         this._extraData.write(Nimiq.BufferUtils.fromAscii(this._pool.name));
         this._extraData.writeUint8(0);
         this._address.serialize(this._extraData);
         this._extraData.writeUint32(this._deviceId);
+        this._extraData.writeUint32(this._nonce);
         this._extraData.writeUint32(Nimiq.BlockUtils.difficultyToCompact(this._difficulty));
     }
 
