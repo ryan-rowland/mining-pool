@@ -62,12 +62,9 @@ class Helper {
      * @returns {Promise.<number>}
      */
     static async getStoreUserId(connectionPool, address) {
-        const [rows, fields] = await connectionPool.execute('CALL GetStoreUserId(?)', [address.toBase64()]);
-        if (rows.length > 0) {
-            return rows[0].id;
-        } else {
-            return -1;
-        }
+        const [[rows, fields]] = await connectionPool.execute('CALL GetStoreUserId(?)', [address.toBase64()]);
+        if (!rows || rows.length !== 1 || !rows[0].id) throw new Error('User access denied by database');
+        return rows[0].id;
     }
 
     /**
@@ -91,12 +88,9 @@ class Helper {
      * @returns {Promise.<number>}
      */
     static async getStoreBlockId(connectionPool, blockHash, height) {
-        const [rows, fields] = await connectionPool.execute('CALL GetStoreBlockId(?, ?)', [blockHash.serialize(), height]);
-        if (rows.length > 0) {
-            return rows[0].id;
-        } else {
-            return -1;
-        }
+        const [[rows, fields]] = await connectionPool.execute('CALL GetStoreBlockId(?, ?)', [blockHash.serialize(), height]);
+        if (!rows || rows.length !== 1 || !rows[0].id) throw new Error('Block access denied by database');
+        return rows[0].id;
     }
 
     /**
