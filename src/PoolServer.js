@@ -6,6 +6,7 @@ const fs = require('fs');
 
 const PoolAgent = require('./PoolAgent.js');
 const Helper = require('./Helper.js');
+const LRUMap = require('./util/LRUMap.js');
 
 class PoolServer extends Nimiq.Observable {
     /**
@@ -76,6 +77,12 @@ class PoolServer extends Nimiq.Observable {
 
         /** @type {boolean} */
         this._started = false;
+
+        /** @type {LRUMap} */
+        this._userAddressToId = new LRUMap(200);
+
+        /** @type {LRUMap} */
+        this._blockHashToId = new LRUMap(10);
 
         setInterval(() => this._checkUnbanIps(), PoolServer.UNBAN_IPS_INTERVAL);
 
@@ -276,7 +283,7 @@ class PoolServer extends Nimiq.Observable {
      * @param {Nimiq.Hash} shareHash
      */
     async storeShare(userId, deviceId, prevHash, prevHashHeight, difficulty, shareHash) {
-        let prevHashId = await Helper.getStoreBlockId(this.connectionPool, prevHash, prevHashHeight);
+        const prevHashId = await this._getStoreBlockId(prevHash, prevHashHeight);
         const query = "INSERT INTO share (user, device, datetime, prev_block, difficulty, hash) VALUES (?, ?, ?, ?, ?, ?)";
         const queryArgs = [userId, deviceId, Date.now(), prevHashId, difficulty, shareHash.serialize()];
         await this.connectionPool.execute(query, queryArgs);
@@ -323,11 +330,30 @@ class PoolServer extends Nimiq.Observable {
     }
 
     /**
+     * @param {Nimiq.Hash} blockHash
+     * @param {number} height
+     * @returns {Promise.<number>}
+     */
+    async _getStoreBlockId(blockHash, height) {
+        let id = this._blockHashToId.get(blockHash);
+        if (!id) {
+            id = await Helper.getStoreBlockId(this.connectionPool, blockHash, height);
+            this._blockHashToId.set(blockHash, id);
+        }
+        return Promise.resolve(id);
+    }
+
+    /**
      * @param {Nimiq.Address} addr
      * @returns {Promise.<number>}
      */
     async getStoreUserId(addr) {
-        return await Helper.getStoreUserId(this.connectionPool, addr);
+        let userId = this._userAddressToId.get(addr);
+        if (!userId) {
+            userId = await Helper.getStoreUserId(this.connectionPool, addr);
+            this._userAddressToId.set(addr, userId);
+        }
+        return userId;
     }
 
     /**

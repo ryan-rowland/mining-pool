@@ -207,7 +207,12 @@ class PoolAgent extends Nimiq.Observable {
             this.fire('block', block.header);
         }
 
-        await this._pool.storeShare(this._userId, this._deviceId, block.header.prevHash, block.header.height - 1, this._difficulty, hash);
+        try {
+            await this._pool.storeShare(this._userId, this._deviceId, block.header.prevHash, block.header.height - 1, this._difficulty, hash);
+        } catch (e) {
+            this._sendError('submitted share twice');
+            throw new Error('Client submitted share twice ' + e.message || e);
+        }
 
         Nimiq.Log.v(PoolAgent, () => `SHARE from ${this._address.toUserFriendlyAddress()} (nano), prev ${block.header.prevHash} : ${hash}`);
 
@@ -221,11 +226,6 @@ class PoolAgent extends Nimiq.Observable {
      * @private
      */
     async _isNanoShareValid(block, hash) {
-        // Check if the share was already submitted
-        if (await this._pool.containsShare(this._userId, hash)) {
-            throw new Error('Client submitted share twice');
-        }
-
         // Check if the body hash is the one we've sent
         if (!block.header.bodyHash.equals(this._currentBody.hash())) {
             return 'wrong body hash';
@@ -298,7 +298,12 @@ class PoolAgent extends Nimiq.Observable {
             this.fire('block', header);
         }
 
-        await this._pool.storeShare(this._userId, this._deviceId, header.prevHash, header.height - 1, difficulty, hash);
+        try {
+            await this._pool.storeShare(this._userId, this._deviceId, header.prevHash, header.height - 1, difficulty, hash);
+        } catch (e) {
+            this._sendError('submitted share twice');
+            throw new Error('Client submitted share twice ' + e.message || e);
+        }
 
         Nimiq.Log.v(PoolAgent, () => `SHARE from ${this._address.toUserFriendlyAddress()} (smart), prev ${header.prevHash} : ${hash}`);
 
@@ -315,11 +320,6 @@ class PoolAgent extends Nimiq.Observable {
      * @private
      */
     async _isSmartShareValid(header, hash, minerAddrProof, extraDataProof, fullBlock) {
-        // Check if the share was already submitted
-        if (await this._pool.containsShare(this._userId, hash)) {
-            throw new Error('Client submitted share twice');
-        }
-
         // Check if we are the _miner or the share
         if (!(await minerAddrProof.computeRoot(this._pool.poolAddress)).equals(header.bodyHash)) {
             return {invalidReason: 'miner address mismatch'};
