@@ -149,6 +149,8 @@ class PoolAgent extends Nimiq.Observable {
         this._lastSpsReset = Date.now();
         this._timers.resetTimeout('recalc-difficulty', () => this._recalcDifficulty(), this._pool.config.spsTimeUnit);
         this._userId = await this._pool.getStoreUserId(this._address);
+        this._deviceLabel = msg.deviceLabel;
+        await this._pool.storeDeviceLabel(this._deviceId, this._deviceLabel);
         this._regenerateNonce();
         this._regenerateExtraData();
 
@@ -164,7 +166,9 @@ class PoolAgent extends Nimiq.Observable {
         await this.sendBalance();
         this._timers.resetInterval('send-balance', () => this.sendBalance(), 1000 * 60 * 2);
 
-        Nimiq.Log.i(PoolAgent, `REGISTER ${this._address.toUserFriendlyAddress()}, current balance: ${await this._pool.getUserBalance(this._userId)}`);
+        Nimiq.Log.i(PoolAgent, `REGISTER ${this._address.toUserFriendlyAddress()}, `
+          + `Device: ${this._deviceLabel || this._deviceId}, `
+          + `Current balance: ${await this._pool.getUserBalance(this._userId)}`);
     }
 
     /**
